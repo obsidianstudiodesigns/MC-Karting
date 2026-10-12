@@ -1,0 +1,8 @@
+.claude/
+Thumbs.db
+.DS_Store
+# client source files (artwork and price list photo), kept locally only
+Flyer1.jpg
+flyer 2.jpg
+Pricing.jpeg
+logo.jpg
