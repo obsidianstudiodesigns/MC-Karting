@@ -1,4 +1,4 @@
-/* MC Karting – page behaviour: header, start lights, price board, booking and enquiries. */
+/* MC Karting: page behaviour: header, start lights, price board, booking and enquiries. */
 (function () {
   'use strict';
 
@@ -17,9 +17,8 @@
 
   /* ---------- header ---------- */
   var header = $('[data-header]');
-  var onScroll = function () { header.classList.toggle('is-solid', window.scrollY > 40); };
-  onScroll();
-  window.addEventListener('scroll', onScroll, { passive: true });
+  // solid header once the top of the hero has scrolled away
+  new IntersectionObserver(function (entries) { header.classList.toggle('is-solid', !entries[0].isIntersecting); }).observe($('[data-hero-sentinel]'));
 
   var toggle = $('[data-nav-toggle]');
   var nav = $('#site-nav');
@@ -46,31 +45,32 @@
     if (started) return;
     started = true;
     if (reduceMotion) { lights.forEach(function (l) { l.classList.add('lit'); }); lightsOut(); return; }
-    lights.forEach(function (l, i) { setTimeout(function () { l.classList.add('lit'); }, 420 * i); });
+    lights.forEach(function (l, i) { setTimeout(function () { l.classList.add('lit'); }, 380 * i); });
     // real starts hold for a random beat before lights out
     setTimeout(function () {
       lights.forEach(function (l) { l.classList.remove('lit'); });
       lightsOut();
-    }, 420 * 4 + 700 + Math.random() * 500);
+    }, 380 * 4 + 500 + Math.random() * 400);
   }
   window.addEventListener('mc:sceneready', function () { setTimeout(runLights, 250); });
-  setTimeout(runLights, 3200); // don't wait forever on a slow 3D load
+  setTimeout(runLights, 1600); // don't wait on a slow 3D load
 
   /* ---------- price board ---------- */
   var board = $('[data-board]');
+  var boardNote = $('[data-board-note]');
+  var NOTE = { single: 'One driver per kart.', double: 'Two-seater: ride together. Good for a parent with a younger child.' };
   var list = $('[data-board-list]');
   var tabs = $$('[data-kart-tab]');
   var currentKart = 'single';
 
   function renderBoard(kart) {
-    var rows = Object.keys(PRICES[kart]).map(function (m) {
-      var w = Math.round(LAPS[m] / 60 * 100);
-      return '<li class="board-row"><span class="t">' + m + ' min</span>' +
-        '<span class="laps"><i style="--w:' + w + '%"></i>' + LAPS[m] + ' laps</span>' +
-        '<span class="p">R' + PRICES[kart][m] + '</span>' +
-        '<a class="row-book" href="#book" data-pick-kart="' + kart + '" data-pick-mins="' + m + '">Book<span class="sr-only"> ' + m + ' minutes, ' + KART_NAME[kart] + '</span></a></li>';
+    list.innerHTML = Object.keys(PRICES[kart]).map(function (m) {
+      return '<li class="lap"><span class="lap-time"><b>' + m + '</b> min</span>' +
+        '<span class="lap-laps">about ' + LAPS[m] + ' laps</span>' +
+        '<span class="lap-price">R' + PRICES[kart][m] + '</span>' +
+        '<a class="lap-book" href="#book" data-pick-kart="' + kart + '" data-pick-mins="' + m + '">Book<span class="sr-only"> ' + m + ' minutes, ' + KART_NAME[kart] + '</span></a></li>';
     }).join('');
-    list.innerHTML = rows;
+    boardNote.textContent = NOTE[kart];
   }
   function selectTab(kart, focus) {
     currentKart = kart;
@@ -127,7 +127,7 @@
     var b = readBooking();
     t('kart').textContent = KART_NAME[b.kart];
     t('mins').textContent = b.bonus ? '15 minutes (pay for 10)' : b.mins + ' minutes';
-    t('laps').textContent = '±' + b.laps;
+    t('laps').textContent = 'about ' + b.laps;
     t('karts').textContent = b.karts + (b.karts > 1 ? ' × R' + b.each : '');
     t('when').textContent = b.date ? prettyDate(b.date) + (b.time ? ', ' + b.time : '') : 'Pick a date';
     t('total').textContent = 'R' + b.total.toLocaleString('en-ZA');

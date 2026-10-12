@@ -1,10 +1,9 @@
-/* MC Karting – hero scene.
+/* MC Karting: hero scene.
    The real track lives in Highveld Mall's undercover parking: fluorescent strips,
    banded pillars, black and white tyre walls. Everything here is built procedurally
    with PBR materials, then finished with AO, bloom, depth of field and grain. */
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { Reflector } from 'three/addons/objects/Reflector.js';
 
 const canvas = document.querySelector('[data-hero-canvas]');
 const hero = document.querySelector('.hero');
@@ -306,8 +305,8 @@ function buildKart(M) {
   const eng = new THREE.Group(); eng.position.set(0.33, 0, -0.4); body.add(eng);
   add(new THREE.Mesh(new RoundedBoxGeometry(0.26, 0.012, 0.26, 2, 0.004), M.alu), eng).position.set(0, 0.09, 0);
   add(new THREE.Mesh(new RoundedBoxGeometry(0.19, 0.16, 0.2, 4, 0.03), M.engine), eng).position.set(0, 0.18, 0);
-  const finGeo = new RoundedBoxGeometry(0.15, 0.007, 0.15, 1, 0.003);
-  const fins = new THREE.InstancedMesh(finGeo, M.engine, 9); fins.castShadow = true; fins.receiveShadow = true;
+  const finGeo = new THREE.BoxGeometry(0.15, 0.007, 0.15); // plain box: a rounded box this thin yields NaN normals
+  const fins = new THREE.InstancedMesh(finGeo, M.fins, 9); fins.castShadow = true; fins.receiveShadow = true;
   const mm = new THREE.Matrix4(), q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -0.45));
   for (let i = 0; i < 9; i++) { mm.compose(V(0.05 + i * 0.011, 0.27 + i * 0.016, 0.0), q, V(1, 1, 1)); fins.setMatrixAt(i, mm); }
   eng.add(fins);
@@ -371,6 +370,7 @@ function buildKart(M) {
 /* ---------- main ---------- */
 async function main() {
   if (!canvas) return;
+  if (/[?&]no3d\b/.test(location.search)) return fail(); // poster only, for layout checks
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: false, alpha: false });
@@ -426,6 +426,8 @@ async function main() {
     opening: new THREE.MeshBasicMaterial({ color: new THREE.Color(0.8, 0.88, 1).multiplyScalar(1.5), fog: true }),
 
     paint: new THREE.MeshPhysicalMaterial({ color: 0xf04a0a, roughness: 0.3, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.05 }),
+    paintBlack: new THREE.MeshPhysicalMaterial({ color: 0x151618, roughness: 0.28, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.04 }),
+    paintWhite: new THREE.MeshPhysicalMaterial({ color: 0xe6e6e2, roughness: 0.3, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.05 }),
     black: new THREE.MeshPhysicalMaterial({ color: 0x0b0c0d, roughness: 0.4, clearcoat: 0.6, clearcoatRoughness: 0.15 }),
     white: new THREE.MeshPhysicalMaterial({ color: 0xf2f2ee, roughness: 0.35, clearcoat: 1, clearcoatRoughness: 0.06, polygonOffset: true, polygonOffsetFactor: -2 }),
     seat: new THREE.MeshPhysicalMaterial({ color: 0x0c0d0f, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.08, side: THREE.DoubleSide }),
@@ -436,6 +438,7 @@ async function main() {
     rim: new THREE.MeshStandardMaterial({ color: 0xc9ccd0, metalness: 1, roughness: 0.3 }),
     disc: new THREE.MeshStandardMaterial({ color: 0x9a9da1, metalness: 1, roughness: 0.22 }),
     engine: new THREE.MeshStandardMaterial({ color: 0x2b2e32, metalness: 0.7, roughness: 0.45 }),
+    fins: new THREE.MeshStandardMaterial({ color: 0x34373b, metalness: 0.35, roughness: 0.78 }),
     muffler: new THREE.MeshStandardMaterial({ color: 0xa8acb0, metalness: 1, roughness: 0.32 }),
     heat: new THREE.MeshStandardMaterial({ color: 0x8c6a48, metalness: 1, roughness: 0.3 }),
     red: new THREE.MeshPhysicalMaterial({ color: 0xc8140c, roughness: 0.35, clearcoat: 0.8 }),
@@ -447,6 +450,7 @@ async function main() {
   };
 
   /* garage */
+  const GRID = [[0, 0], [-1.45, -1.75], [0, -3.5], [-1.45, -5.25]]; // kart positions, pole first
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), M.floor);
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
 
@@ -485,9 +489,10 @@ async function main() {
   const stackGeo = new THREE.LatheGeometry(tyreProfile(0.3, 0.17, 0.2), 20);
   const stackSpots = [];
   const line = (x0, z0, x1, z1) => { const len = Math.hypot(x1 - x0, z1 - z0), n = Math.floor(len / 0.62); for (let i = 0; i <= n; i++) { const t = i / n; stackSpots.push([x0 + (x1 - x0) * t, z0 + (z1 - z0) * t]); } };
-  line(-2.5, 9, -2.5, -32); line(3.3, 0.4, 3.3, -40);
+  line(-2.9, 9, -2.9, -32); line(3.3, 0.4, 3.3, -40);
   line(-7.6, 6, -7.6, -40);
   for (let a = 0; a <= Math.PI; a += 0.62 / 5.45) stackSpots.push([-2.15 + Math.cos(a) * 5.45, -40 - Math.sin(a) * 2.2]);
+  for (let a = 0; a <= Math.PI; a += 0.62 / 2.35) stackSpots.push([-5.25 + Math.cos(a) * 2.35, -32 + Math.sin(a) * 1.2]);
   const R = rng(99);
   const stacks = new THREE.InstancedMesh(stackGeo, M.stackTyre, stackSpots.length * 3);
   const col = new THREE.Color(); let si = 0;
@@ -504,7 +509,7 @@ async function main() {
   stacks.castShadow = true; stacks.receiveShadow = true; scene.add(stacks);
 
   // chevron boards on the tyre walls
-  [[-2.5, -9, Math.PI / 2], [3.3, -17, -Math.PI / 2], [-2.5, -27, Math.PI / 2]].forEach(([x, z, ry]) => {
+  [[-2.9, -11, Math.PI / 2], [3.3, -17, -Math.PI / 2], [-2.9, -27, Math.PI / 2]].forEach(([x, z, ry]) => {
     const b = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.5, 0.03), [M.beam, M.beam, M.beam, M.beam, M.chevron, M.beam]);
     b.position.set(x + (ry > 0 ? 0.32 : -0.32), 0.88, z); b.rotation.y = ry; b.castShadow = true; scene.add(b);
   });
@@ -534,13 +539,13 @@ async function main() {
     g.beginPath(); g.moveTo(px(-5.2), pz(9)); g.lineTo(px(-5.2), pz(-36)); g.stroke();
     // start line chequers across the track ahead of the kart
     const sq = 0.16;
-    for (let x = -2.25; x < 3.0; x += sq) for (let r = 0; r < 2; r++) {
-      if ((Math.round((x + 2.25) / sq) + r) % 2) continue;
+    for (let x = -2.65; x < 3.0; x += sq) for (let r = 0; r < 2; r++) {
+      if ((Math.round((x + 2.65) / sq) + r) % 2) continue;
       g.fillStyle = 'rgba(232,232,226,0.78)'; g.fillRect(px(x), pz(1.55 + r * sq), sq * m, sq * m);
     }
-    // grid box bracket around the kart
+    // grid box brackets, one per kart on the starting grid
     g.strokeStyle = 'rgba(244,244,238,0.85)'; g.lineWidth = m * 0.08; g.lineCap = 'butt';
-    g.beginPath(); g.moveTo(px(-0.95), pz(0.55)); g.lineTo(px(-0.95), pz(1.25)); g.lineTo(px(0.95), pz(1.25)); g.lineTo(px(0.95), pz(0.55)); g.stroke();
+    GRID.forEach(([kx, kz]) => { g.beginPath(); g.moveTo(px(kx - 0.95), pz(kz + 0.55)); g.lineTo(px(kx - 0.95), pz(kz + 1.25)); g.lineTo(px(kx + 0.95), pz(kz + 1.25)); g.lineTo(px(kx + 0.95), pz(kz + 0.55)); g.stroke(); });
     // wear: punch holes in the paint
     g.globalCompositeOperation = 'destination-out';
     for (let i = 0; i < W * 16; i++) { g.fillStyle = `rgba(0,0,0,${0.2 + Rm() * 0.6})`; const s = 1 + Rm() * 3.5; g.fillRect(Rm() * W, Rm() * H, s, s); }
@@ -567,22 +572,23 @@ async function main() {
     scene.add(m); return m;
   })();
 
-  /* the kart */
+  /* the grid: pole-sitter in orange, the rest in the other house liveries */
   const K = buildKart(M);
-  K.kart.rotation.y = 0.0;
   scene.add(K.kart);
+  const liveries = [M.paintBlack, M.paintWhite, M.paint];
+  GRID.slice(1).forEach(([x, z], i) => { const k = buildKart({ ...M, paint: liveries[i] }); k.kart.position.set(x, 0, z); k.kart.rotation.y = (i % 2 ? 0.03 : -0.04); scene.add(k.kart); });
 
   // contact shadows, to sit everything on the slab
   const spot = softSpot();
-  const cs = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 2.5), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, opacity: 0.8, color: 0x000000, alphaMap: spot }));
-  cs.rotation.x = -Math.PI / 2; cs.position.y = 0.002; scene.add(cs);
+  const csMat = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, opacity: 0.8, color: 0x000000, alphaMap: spot });
+  GRID.forEach(([x, z]) => { const cs = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 2.5), csMat); cs.rotation.x = -Math.PI / 2; cs.position.set(x, 0.002, z); scene.add(cs); });
 
   /* lights */
   const hemi = new THREE.HemisphereLight(0xdfe6ee, 0x4a4640, 0); scene.add(hemi);
   const key = new THREE.DirectionalLight(0xf3f6ff, 0);
-  key.position.set(0.6, 6, 1.2); key.target.position.set(0, 0, -0.1);
+  key.position.set(0.2, 6, -1.4); key.target.position.set(-0.7, 0, -2.6);
   key.castShadow = true; key.shadow.mapSize.set(LOW ? 1024 : 2048, LOW ? 1024 : 2048);
-  Object.assign(key.shadow.camera, { left: -3.2, right: 3.2, top: 3.2, bottom: -3.2, near: 1, far: 12 });
+  Object.assign(key.shadow.camera, { left: -3.4, right: 3.4, top: 4.6, bottom: -4.6, near: 1, far: 12 });
   key.shadow.camera.updateProjectionMatrix(); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 5;
   scene.add(key, key.target);
   // strip-light highlights come from the environment map; one fill stands in for the daylight openings
@@ -608,7 +614,6 @@ async function main() {
   function buildPost() {
     if (composer) { composer.dispose(); composer = null; dof = null; }
     renderer.setPixelRatio(Math.min(devicePixelRatio || 1, DPR_MAX[tier]));
-    if (typeof mirror !== 'undefined') mirror.visible = tier >= 2;
     if (!PP) return;
     try {
       const { EffectComposer, RenderPass, EffectPass, BloomEffect, ToneMappingEffect, ToneMappingMode, VignetteEffect, SMAAEffect, NoiseEffect, BlendFunction, ChromaticAberrationEffect, DepthOfFieldEffect } = PP;
@@ -620,6 +625,9 @@ async function main() {
         ao.setQualityMode('Medium');
         composer.addPass(ao);
       }
+      // clamp runaway highlights (half-float overflow on clearcoat) and drop NaNs (scene or AO) before blur passes
+      // can spread them into black discs
+      composer.addPass(new EffectPass(camera, new PP.Effect('Sanitize', 'void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) { vec3 c = inputColor.rgb; if (any(isnan(c)) || any(isinf(c))) c = vec3(0.0); outputColor = vec4(min(c, vec3(9.0)), inputColor.a); }')));
       if (tier >= 2) {
         dof = new DepthOfFieldEffect(camera, { worldFocusDistance: 4, worldFocusRange: 3.6, bokehScale: 1.8, resolutionScale: 0.5 });
         composer.addPass(new EffectPass(camera, dof));
@@ -639,11 +647,6 @@ async function main() {
   }
   let W = 1, H = 1;
 
-  // soft reflections in the polished slab (top tier only: it costs a second scene render at low resolution)
-  const mirror = new Reflector(new THREE.PlaneGeometry(14, 26), { textureWidth: 512, textureHeight: 512, color: 0x5a5a5a, clipBias: 0.003 });
-  mirror.rotation.x = -Math.PI / 2; mirror.position.set(0, 0.005, -8);
-  Object.assign(mirror.material, { transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
-  mirror.renderOrder = 3; scene.add(mirror);
   buildPost();
 
   // fixed scenery, so shadows only need redrawing when the kart moves
@@ -655,6 +658,10 @@ async function main() {
     const r = stage.getBoundingClientRect();
     W = Math.max(1, Math.round(r.width)); H = Math.max(1, Math.round(r.height));
     renderer.setSize(W, H, false);
+    frameCamera(W, H);
+    if (composer) composer.setSize(W, H);
+  }
+  function frameCamera(W, H) {
     // keep the kart clear of the copy: right of frame on wide screens, top of frame on tall ones.
     // the projection is built for the full (virtual) frame, so aspect and fov describe that frame
     const wide = W / H > 1.15;
@@ -663,7 +670,6 @@ async function main() {
     camera.setViewOffset(FW, FH, 0, FH - H, W, H);
     camera.fov = wide ? 32 : 46;
     camera.updateProjectionMatrix();
-    if (composer) composer.setSize(W, H);
   }
   resize();
   new ResizeObserver(resize).observe(stage);
@@ -671,18 +677,20 @@ async function main() {
   /* input */
   const ptr = { x: 0, y: 0, tx: 0, ty: 0 };
   addEventListener('pointermove', e => { if (e.pointerType === 'touch') return; ptr.tx = (e.clientX / innerWidth) * 2 - 1; ptr.ty = (e.clientY / innerHeight) * 2 - 1; }, { passive: true });
+  // scroll progress through the hero, from how much of it is still on screen
   let scrollP = 0;
-  const onScroll = () => { scrollP = Math.min(1, Math.max(0, scrollY / (hero.offsetHeight || 1))); };
-  addEventListener('scroll', onScroll, { passive: true }); onScroll();
+  new IntersectionObserver(([e]) => { scrollP = 1 - e.intersectionRatio; }, { threshold: Array.from({ length: 41 }, (_, i) => i / 40) }).observe(hero);
+  let camOverride = null;
 
   /* lights-out sequence */
   const clock = new THREE.Clock();
-  const fx = fixtures.map(p => ({ p, on: 0, start: Infinity, flick: 0.18 + R() * 0.35, seed: R() * 50 }));
+  // the garage is lit from the first frame. on lights out the far strips re-strike and the camera rolls in
+  const fx = fixtures.map(p => ({ p, on: 1, start: -Infinity, flick: 0.12 + R() * 0.25, seed: R() * 50 }));
   let tOut = null;
   function lightsOn(now) {
     if (tOut !== null) return;
     tOut = now;
-    fx.forEach(f => { const d = f.p.distanceTo(V(0, CEIL, 0)); f.start = now + (reduceMotion ? 0 : d * 0.028 + R() * 0.18); });
+    if (!reduceMotion) fx.forEach(f => { if (f.p.z < -12 || Math.abs(f.p.x) > 5) f.start = now + (-f.p.z) * 0.012 + R() * 0.15; });
   }
   let simT = 0;
   addEventListener('mc:lightsout', () => lightsOn(simT));
@@ -707,8 +715,8 @@ async function main() {
       const f = fx[i]; let v = 0;
       if (t >= f.start) {
         const k = t - f.start;
-        v = k < f.flick ? (Math.sin(k * 90 + f.seed) > 0.2 ? 0.25 + Math.random() * 0.75 : 0.02) : 1;
-      }
+        v = k < f.flick ? (Math.sin(k * 90 + f.seed) > 0.2 ? 0.35 + Math.random() * 0.65 : 0.05) : 1;
+      } else v = 1;
       f.on = v; total += v;
       if (Math.abs(f.p.x) < 3 && f.p.z < 7 && f.p.z > -4) { near += v; nearN++; }
       tmpCol.setScalar(v);
@@ -735,10 +743,11 @@ async function main() {
     const wide = W / H > 1.15;
     const theta = (wide ? 0.7 : 0.62) + drift + ptr.x * 0.2 - scrollP * 0.35;
     const phi = (wide ? 1.45 : 1.4) - ptr.y * 0.05 - scrollP * 0.22;
-    const rad = (wide ? 4.0 : 6.4) * (1 + scrollP * 0.12);
-    camera.position.set(target.x + rad * Math.sin(phi) * Math.sin(theta), target.y + rad * Math.cos(phi), target.z + rad * Math.sin(phi) * Math.cos(theta));
-    camera.lookAt(target);
-    if (dof) dof.cocMaterial.worldFocusDistance = camera.position.distanceTo(target);
+    const k = tOut === null ? 0 : Math.min(1, (t - tOut) / 1.8), roll = reduceMotion ? 0 : 0.14 * (1 - (1 - Math.pow(1 - k, 3)));
+    const rad = (wide ? 4.0 : 6.4) * (1 + scrollP * 0.12 + roll);
+    if (camOverride) { camera.position.set(...camOverride.pos); camera.lookAt(V(...camOverride.target)); }
+    else { camera.position.set(target.x + rad * Math.sin(phi) * Math.sin(theta), target.y + rad * Math.cos(phi), target.z + rad * Math.sin(phi) * Math.cos(theta)); camera.lookAt(target); }
+    if (dof && dof.cocMaterial) dof.cocMaterial.worldFocusDistance = camOverride && camOverride.focus ? camOverride.focus : camera.position.distanceTo(target);
 
     // steer with the pointer; idle sway on touch
     const steerT = coarse ? Math.sin(t * 0.6) * 0.25 : -ptr.x * 0.42;
@@ -762,6 +771,7 @@ async function main() {
 
     if (!draw) return;
     if (composer) composer.render(dt); else renderer.render(scene, camera);
+    if (!drawn) { drawn = true; ready(); if (hero.classList.contains('go')) lightsOn(simT); } // reveal only after a real frame
 
     // quality governor: step down a tier while the frame rate is under ~28fps
     if (t > 0.8 && sampleStart !== Infinity && document.visibilityState === 'visible') {
@@ -776,15 +786,14 @@ async function main() {
       }
     }
   }
-  let sampleStart = null, sampleFrames = 0, lastSteer = 0;
-  if (/[?&]debug3d\b/.test(location.search)) window.__mc = { renderer, scene, camera, get composer() { return composer; }, get tier() { return tier; }, setTier(n) { tier = n; buildPost(); resize(); sampleStart = Infinity; }, tick(n, dt = 1 / 60) { for (let i = 0; i < n; i++) update(dt, i === n - 1); }, lightsOn: () => lightsOn(simT), ptr };
+  let sampleStart = null, sampleFrames = 0, lastSteer = 0, drawn = false;
+  if (/[?&]debug3d\b/.test(location.search)) window.__mc = { renderer, scene, camera, get composer() { return composer; }, get tier() { return tier; }, setTier(n) { tier = n; buildPost(); resize(); sampleStart = Infinity; }, tick(n, dt = 1 / 60) { for (let i = 0; i < n; i++) update(dt, i === n - 1); }, lightsOn: () => lightsOn(simT), ptr,
+    // render a still from any camera at any size, for page imagery
+    shot(o) { camOverride = o.hero ? null : o; renderer.setPixelRatio(1); renderer.setSize(o.w, o.h, false); const sW = W, sH = H; if (o.hero) { W = o.w; H = o.h; frameCamera(o.w, o.h); } else { camera.clearViewOffset(); camera.aspect = o.w / o.h; camera.fov = o.fov || 30; camera.updateProjectionMatrix(); } if (composer) composer.setSize(o.w, o.h); renderer.shadowMap.needsUpdate = true; for (let i = 0; i < 40; i++) update(1 / 60, i === 39); const url = renderer.domElement.toDataURL('image/jpeg', 0.92); camOverride = null; W = sW; H = sH; buildPost(); resize(); return url; } };
 
-  try { await renderer.compileAsync(scene, camera); } catch (e) { /* older drivers: compile on first frame */ }
+  // some driver/browser pairs never resolve compileAsync, so never let it hold up the first frame
+  try { await Promise.race([renderer.compileAsync(scene, camera), new Promise(r => setTimeout(r, 1200))]); } catch (e) { /* compile on first frame */ }
   frame();
-  requestAnimationFrame(() => {
-    ready();
-    if (hero.classList.contains('go')) lightsOn(simT);
-  });
 }
 
 main().catch(fail);
