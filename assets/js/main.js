@@ -52,8 +52,7 @@
       lightsOut();
     }, 380 * 4 + 500 + Math.random() * 400);
   }
-  window.addEventListener('mc:sceneready', function () { setTimeout(runLights, 250); });
-  setTimeout(runLights, 1600); // don't wait on a slow 3D load
+  setTimeout(runLights, 700);
 
   /* ---------- price board ---------- */
   var board = $('[data-board]');

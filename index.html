@@ -40,24 +40,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Saira:ital,wdth,wght@0,50..125,300..900;1,50..125,300..900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=3">
+  <link rel="stylesheet" href="assets/css/style.css?v=4">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/bold/style.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css">
-  <link rel="preload" as="image" href="assets/img/renders/hero-poster.jpg" media="(min-aspect-ratio: 23/20)">
-  <link rel="preload" as="image" href="assets/img/renders/hero-poster-m.jpg" media="(max-aspect-ratio: 23/20)">
+  <link rel="preload" as="image" href="assets/img/landing-poster.jpg" media="(min-aspect-ratio: 23/20)">
+  <link rel="preload" as="image" href="assets/img/landing-mobile-poster.jpg" media="(max-aspect-ratio: 23/20)">
   <script>document.documentElement.classList.add('js');</script>
-
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
-        "postprocessing": "https://cdn.jsdelivr.net/npm/postprocessing@6.36.4/build/index.js",
-        "n8ao": "https://cdn.jsdelivr.net/npm/n8ao@1.9.4/dist/N8AO.js"
-      }
-    }
-  </script>
 
   <script type="application/ld+json">
   {
@@ -140,10 +129,28 @@
   </header>
 
   <main id="main">
-    <!-- HERO: rendered poster first, live 3D garage on top once it's ready -->
+    <!-- HERO: looping track video (landscape on wide screens, portrait on phones), poster frame underneath -->
     <section class="hero" id="top" aria-labelledby="hero-title">
       <div class="hero-stage" data-stage>
-        <canvas class="hero-canvas" data-hero-canvas aria-hidden="true"></canvas>
+        <video class="hero-video" data-hero-video muted loop playsinline preload="auto" aria-hidden="true" disablepictureinpicture></video>
+        <script>
+          // pick the clip for this screen shape before the browser starts fetching anything
+          (function (v) {
+            var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var saveData = navigator.connection && navigator.connection.saveData;
+            if (reduce || saveData) return; // poster frame only
+            var tall = matchMedia('(max-aspect-ratio: 23/20)');
+            function pick() {
+              var src = tall.matches ? 'assets/video/landing-mobile.mp4' : 'assets/video/landing.mp4';
+              if (v.getAttribute('src') === src) return;
+              v.src = src; v.load();
+              var p = v.play(); if (p && p.catch) p.catch(function () {});
+            }
+            v.addEventListener('playing', function () { v.classList.add('is-playing'); });
+            pick();
+            if (tall.addEventListener) tall.addEventListener('change', pick);
+          })(document.currentScript.previousElementSibling);
+        </script>
       </div>
       <span class="hero-sentinel" data-hero-sentinel aria-hidden="true"></span>
 
@@ -210,7 +217,7 @@
         </div>
 
         <figure class="prices-photo">
-          <img src="assets/img/renders/pole-position.jpg" alt="An orange MC Karting kart on pole at the start line, with the rest of the grid behind it" width="960" height="1120" loading="lazy">
+          <img src="assets/img/arrive-and-drive.jpg" alt="A go-kart waiting on the line on an underground parking garage track" width="1400" height="764" loading="lazy">
           <aside class="friday" aria-labelledby="friday-title">
             <h3 id="friday-title">Friday Madness</h3>
             <p>Pay for 10 minutes, drive for 15. Every Friday, single and double karts.</p>
@@ -531,7 +538,6 @@
     <i class="ph-fill ph-whatsapp-logo" aria-hidden="true"></i>
   </a>
 
-  <script src="assets/js/main.js?v=3" defer></script>
-  <script type="module" src="assets/js/scene.js?v=3"></script>
+  <script src="assets/js/main.js?v=4" defer></script>
 </body>
 </html>
