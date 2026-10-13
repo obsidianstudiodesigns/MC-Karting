@@ -1,4 +1,4 @@
-/* MC Karting: page behaviour: header, start lights, price board, booking and enquiries. */
+/* MC Karting: page behaviour: header, price board, booking and enquiries. */
 (function () {
   'use strict';
 
@@ -32,27 +32,6 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setMenu(false); });
 
   $$('[data-year]').forEach(function (el) { el.textContent = new Date().getFullYear(); });
-
-  /* ---------- start lights: five reds, then lights out ---------- */
-  var hero = $('.hero');
-  var lights = $$('[data-lights] span');
-  var started = false;
-  function lightsOut() {
-    hero.classList.add('go');
-    window.dispatchEvent(new CustomEvent('mc:lightsout'));
-  }
-  function runLights() {
-    if (started) return;
-    started = true;
-    if (reduceMotion) { lights.forEach(function (l) { l.classList.add('lit'); }); lightsOut(); return; }
-    lights.forEach(function (l, i) { setTimeout(function () { l.classList.add('lit'); }, 380 * i); });
-    // real starts hold for a random beat before lights out
-    setTimeout(function () {
-      lights.forEach(function (l) { l.classList.remove('lit'); });
-      lightsOut();
-    }, 380 * 4 + 500 + Math.random() * 400);
-  }
-  setTimeout(runLights, 700);
 
   /* ---------- price board ---------- */
   var board = $('[data-board]');
